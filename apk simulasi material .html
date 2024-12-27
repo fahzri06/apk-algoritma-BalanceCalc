@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulasi Material Balance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background-color: #d6d0d0;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #00ffd5;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result, .history {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #e9f7df;
+      border: 1px solid #d4e6c3;
+      border-radius: 5px;
+    }
+    .history-list {
+      list-style: none;
+      padding: 0;
+    }
+    .history-list li {
+      margin: 5px 0;
+      padding: 5px;
+      background-color: #e0d1d1;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>BalanceCalc</h1>
+  <div class="container">
+    <h2>Input Data</h2>
+    <label for="n">Cadangan Awal (N, MMSTB):</label>
+    <input type="number" id="n" placeholder="Masukkan nilai N (juta STB)">
+    
+    <label for="p">Tekanan Awal (Pi, Psia):</label>
+    <input type="number" id="p" placeholder="Masukkan nilai Pi">
+    
+    <label for="pe">Tekanan Saat Ini (P, Psia):</label>
+    <input type="number" id="pe" placeholder="Masukkan nilai P">
+
+    <label for="bg">Faktor Volume Gas (Bg):</label>
+    <input type="number" step="0.0001" id="bg" placeholder="Masukkan nilai Bg">
+
+    <label for="rp">Rasio Gas-Minyak (Rp, SCF/STB):</label>
+    <input type="number" id="rp" placeholder="Masukkan nilai Rp">
+
+    <button onclick="calculateBalance()">Hitung Material Balance</button>
+
+    <div class="result" id="result" style="display: none;">
+      <h3>Hasil:</h3>
+      <p id="output"></p>
+      <h4>Penjelasan Output:</h4>
+      <p id="explanation"></p>
+    </div>
+
+    <div class="history" id="history">
+      <h3>Histori Simulasi</h3>
+      <ul class="history-list" id="history-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    function calculateBalance() {
+      const n = parseFloat(document.getElementById('n').value);
+      const pi = parseFloat(document.getElementById('p').value);
+      const p = parseFloat(document.getElementById('pe').value);
+      const bg = parseFloat(document.getElementById('bg').value);
+      const rp = parseFloat(document.getElementById('rp').value);
+
+      if (isNaN(n) || isNaN(pi) || isNaN(p) || isNaN(bg) || isNaN(rp)) {
+        alert('Mohon masukkan semua nilai dengan benar.');
+        return;
+      }
+
+      // Perhitungan Material Balance
+      const pressureDecline = pi - p;
+      const gasExpansion = bg * rp * n;
+      const remainingReserves = n - (pressureDecline * gasExpansion);
+
+      // Tampilkan hasil
+      const resultDiv = document.getElementById('result');
+      const output = document.getElementById('output');
+      const explanation = document.getElementById('explanation');
+      resultDiv.style.display = 'block';
+      output.innerHTML = `
+        <strong>Penurunan Tekanan:</strong> ${pressureDecline.toFixed(2)} Psia<br>
+        <strong>Ekspansi Gas:</strong> ${gasExpansion.toFixed(2)} MMscf<br>
+        <strong>Cadangan Tersisa:</strong> ${remainingReserves.toFixed(2)} MMSTB
+      `;
+      explanation.innerHTML = `
+        <ul>
+          <li><strong>Penurunan Tekanan:</strong> Mengukur perbedaan tekanan awal dan tekanan saat ini dalam reservoir.</li>
+          <li><strong>Ekspansi Gas:</strong> Volume gas yang diperoleh dari cadangan hidrokarbon berdasarkan faktor Bg dan Rp.</li>
+          <li><strong>Cadangan Tersisa:</strong> Perkiraan jumlah minyak yang masih dapat dieksploitasi dari reservoir.</li>
+        </ul>
+      `;
+
+      // Simpan histori ke localStorage
+      const history = JSON.parse(localStorage.getItem('simulationHistory')) || [];
+      const newEntry = {
+        n, pi, p, bg, rp, pressureDecline, gasExpansion, remainingReserves
+      };
+      history.push(newEntry);
+      localStorage.setItem('simulationHistory', JSON.stringify(history));
+
+      // Update histori di UI
+      updateHistoryUI(history);
+    }
+
+    function updateHistoryUI(history) {
+      const historyList = document.getElementById('history-list');
+      historyList.innerHTML = '';
+      history.forEach((entry, index) => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+          Simulasi ${index + 1}: Cadangan Awal = ${entry.n}, Tekanan Awal = ${entry.pi}, Tekanan Saat Ini = ${entry.p}, Cadangan Tersisa = ${entry.remainingReserves.toFixed(2)} MMSTB
+        `;
+        historyList.appendChild(listItem);
+      });
+    }
+
+    // Load histori saat halaman dimuat
+    window.onload = function () {
+      const history = JSON.parse(localStorage.getItem('simulationHistory')) || [];
+      updateHistoryUI(history);
+    };
+  </script>
+</body>
+</html>
